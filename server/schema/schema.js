@@ -1,10 +1,10 @@
 const Project = require('../models/Project');
 const Client = require('../models/Client');
 
-const { GraphQLObjectType, GraphQLID, GraphQLString, GraphQLSchema, graphql, GraphQLList } = require('graphql');
+const { GraphQLObjectType, GraphQLID, GraphQLString, GraphQLSchema, graphql, GraphQLList, GraphQLNonNull } = require('graphql');
 
 // Client Type
-const CientType = new GraphQLObjectType({
+const ClientType = new GraphQLObjectType({
     name: 'Client',
     fields: () => ({
         id: { type: GraphQLID },
@@ -23,7 +23,7 @@ const ProjectType = new GraphQLObjectType({
         description: { type: GraphQLString },
         status: { type: GraphQLString },
         client: {
-            type: CientType,
+            type: ClientType,
             resolve: (parent, args) => {
                 return Client.findById(parent.clientId);
             }
@@ -48,14 +48,14 @@ const rootQuery = new GraphQLObjectType({
             }
         },
         client: {
-            type: CientType,
+            type: ClientType,
             args: { id: { type: GraphQLID } },
             resolve(parent, args) {
                 return Client.findById(args.id);
             }
         },
         clients: {
-            type: new GraphQLList(CientType),
+            type: new GraphQLList(ClientType),
             resolve: (parent, args) => {
                 return Client.find();
             }
@@ -63,6 +63,42 @@ const rootQuery = new GraphQLObjectType({
     }
 })
 
+// Mutations
+const mutation = new GraphQLObjectType({
+    name: 'Mutation',
+    fields: {
+        // Add a Client
+        addClient: {
+            type: ClientType,
+            args: {
+                name: { type: GraphQLNonNull(GraphQLString) },
+                email: { type: GraphQLNonNull(GraphQLString) },
+                phone: { type: GraphQLNonNull(GraphQLString) }
+            },
+            resolve: (parent, args) => {
+                const client = new Client({
+                    name: args.name,
+                    email: args.email,
+                    phone: args.phone
+                });
+                return client.save();
+            }
+        },
+
+        // Delete a Client
+        deleteClient: {
+            type: ClientType,
+            args: {
+                id: { type: GraphQLNonNull(GraphQLID) }
+            },
+            resolve: (parent, args) => {
+                return Client.findByIdAndDelete(args.id);
+            }
+        }
+    }
+});
+
 module.exports = new GraphQLSchema({
-    query: rootQuery
+    query: rootQuery,
+    mutation
 })
